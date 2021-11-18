@@ -33,7 +33,7 @@ class CPG{
 	}
 	private function contenitore(){
 		return "
-			<div class='contenitore'>
+			<div id='contenitore'>
 				".$this->contenitore."
 			</div>
 		";
