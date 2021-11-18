@@ -5,7 +5,7 @@
 	$pg=new CPG("ciao");
 	$r="
 		
-		<div class='frmIntesta'>
+		<div id='frmIntesta'>
 			Iserisci gli account di root e di utente
 		</div>
 		<div>
