@@ -50,7 +50,6 @@ class CDB{
 		}
 		$size=10;
 		$content = fread($handler, filesize($this->filename) );
-		$content=$this->decripta($content,"1234");
 		fclose($handler);
 		
 		return $content;
@@ -63,14 +62,8 @@ class CDB{
 			return "Impossibile scrivere il file $this->filename";
 		}
 		$en=$this->uroot."-".$this->proot."-".$this->utente."-".$this->passwd;
-		$en=$this->cripta($en,"1234");
 		fwrite($handler, $en);
 		fclose($handler);
-	}
-	private function decripta($en,$key_enc){
-		$met_enc = 'aes256';
-		$iv = '9ua1R0iHLD56hG13'; 
-		return openssl_decrypt($en, $met_enc, $key_enc, 0, $iv);
 	}
 	private function cripta($s,$key_enc){
 		$met_enc = 'aes256';
@@ -93,7 +86,7 @@ class CDB{
 			
 	}
 }
-/***********************************************/
+/***********************************************
 $db=new CDB();
 echo $db->installa("1234","root","passroot","utente","passutente");
 
