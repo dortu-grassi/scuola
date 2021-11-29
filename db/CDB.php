@@ -3,11 +3,13 @@ class CDB{
 	private $server="localhost";
 	private $uroot="";
 	private $proot="";
-	private $utente="misterno";
-	private $passwd="OrtuOrtu66";
+	private $utente="";
+	private $passwd="";
+	private $licenza="";
 	protected $schema="dbgriglie";
 	protected $conn;
-	private $filename = 'auto/file.txt';
+	private $filename = 'auto/licenza.txt';
+	private $key="A82DD517";
 	
 	/*************** anagrafica *************************/
 	protected $tbAnagrafica="tbAnagrafica";
@@ -17,7 +19,25 @@ class CDB{
 	
 	public function __construct(){
 	}
-	
+	private function msgERR($s){
+		return "<h4>$s</h4>";
+	}
+	private function msg($d,$s){
+		return "
+			<script>
+			document.getElementById('".$d."').innerHTML+='<h5>".$s."</h5>';
+			document.getElementById('".$d."').scrollTop=document.getElementById('".$d."').scrollHeight;
+			</script>";
+	}
+	public function setLicenza($u){
+			$this->licenza=$u;
+	}
+	public function setUser($u){
+			$this->user=$u;
+	}
+	public function setPasswd($u){
+			$this->passwd=$u;
+	}
 	public function getNomeTBAnagrafica(){
 		return $this->schema.".".$this->tbAnagrafica;
 	}
@@ -40,49 +60,93 @@ class CDB{
 	private function chiudi(){
 		$this->conn->close();
 	}
-	public function leggiAutorizzazioni(){
+	private function leggiAutorizzazioni(){
 		
+		if( !file_exists($this->filename) ){
+			return "licenza non esistente";
+		}
 		$handler = fopen($this->filename, 'r');
 
 		if (false === $handler) {
-			return "Impossibile aprire il file $this->filename" ;
+			//echo "Impossibile aprire il file $this->filename" ;
+			return "Impossibile leggere la licenza";
 			
 		}
 		$size=10;
 		$content = fread($handler, filesize($this->filename) );
+		//echo $content;
+		$content=$this->decripta($content,$this->key);
+		//echo $content;
+		$content=explode("-",$content);
+		
+		$this->utente=$content[0];
+		$this->passwd=$content[1];
+
 		fclose($handler);
 		
-		return $content;
+		return "";
 	}
 
-	private function scriviAutorizzazioni(){
+	private function creaLicenza($u,$p){
 		$handler = fopen($this->filename, 'w');
 
 		if (false === $handler) {
 			return "Impossibile scrivere il file $this->filename";
 		}
-		$en=$this->uroot."-".$this->proot."-".$this->utente."-".$this->passwd;
+		$en=$u."-".$p;
+		$en=$this->cripta($en,$this->key);
 		fwrite($handler, $en);
 		fclose($handler);
+		return "";
 	}
 	private function cripta($s,$key_enc){
 		$met_enc = 'aes256';
 		$iv = '9ua1R0iHLD56hG13'; 
 		return openssl_encrypt($s, $met_enc, $key_enc, 0, $iv);
 	}
-	/*
-	public function installa($chiave){
-	
+	private function decripta($s,$key_enc){
+		$met_enc = 'aes256';
+		$iv = '9ua1R0iHLD56hG13'; 
+		return openssl_decrypt($s, $met_enc, $key_enc, 0, $iv);
 	}
-	*/
-	public function installa($chiave,$uroot,$pswRoot,$user,$passwd){
-		$this->uroot="$uroot";
-		$this->proot=$pswRoot;
-		$this->utente=$user;
-		$this->passwd=$passwd;
+	
+	public function licenzia($post){
 		
-		$this->scriviAutorizzazioni();
-		return $this->leggiAutorizzazioni();
+		echo $this->creaLicenza($post['txtUser'],$post['txtUserPSW']);
+		
+	}
+	public function installa($post,$msg){
+		if( $r=$this->leggiAutorizzazioni()  ){
+			echo $this->msg($msg,$r);
+			return;
+		}
+		//echo  $this->msgERR($this->utente."-".$this->passwd);
+		//return;
+		
+		//echo  $this->msgERR($this->user."-".$post['txtUser']);
+		if( ($post['txtUser']!=$this->utente) || ($post['txtUserPSW']!=$this->passwd) ){
+			echo $this->msg($msg,"UTENTE O PASSWORD ERRATI");
+			return;
+		}
+		ob_implicit_flush(true);
+		ob_end_flush();
+		
+		echo $this->msg($msg,"p1");
+		
+		sleep(1);
+		echo $this->msg($msg,"p2");
+		
+		sleep(1);
+		echo $this->msg($msg,"p3");
+		sleep(1);
+		echo $this->msg($msg,"p3");
+		sleep(1);
+		echo $this->msg($msg,"p3");
+		sleep(1);
+		echo $this->msg($msg,"p5");
+		
+		//$this->scriviAutorizzazioni();
+		//return $this->leggiAutorizzazioni();
 			
 	}
 }

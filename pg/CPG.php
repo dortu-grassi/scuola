@@ -7,6 +7,8 @@ class CPG{
 	
 	private $titolo="";
 	private $contenitore="<h1>PAGINA IN COSTRUZIONE</h1>";
+	private $js="";
+	private $css="<link rel='stylesheet' href='../css/std.css'>";
 	
 	public function __construct($titolo){
 		$this->setTitolo($titolo);
@@ -17,12 +19,19 @@ class CPG{
 					<TITLE>$this->titolo</TITLE>
 					<meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
 					<META NAME=author CONTENT='Ortu prof. Daniele dortu_grassi@hotmail.it'>
-					<link rel='stylesheet' href='../css/std.css'>
+					$this->css
+					$this->js
 				</HEAD>
 		";
 	}
+	public function setCSS($css){
+		$this->css.="<link rel='stylesheet' href='../css/$css'>";
+	}
+	public function setJS($js){
+		$this->js.="<script type='text/javascript' src='$js'></script>";
+	}
 	public function setTitolo($t){
-		$this->titolo=substr($t,0,9);;
+		$this->titolo=substr($t,0,9);
 	}
 	private function intestazione(){
 		return "
