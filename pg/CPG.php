@@ -19,6 +19,7 @@ class CPG{
 					<TITLE>$this->titolo</TITLE>
 					<meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
 					<META NAME=author CONTENT='Ortu prof. Daniele dortu_grassi@hotmail.it'>
+					<link rel='icon' type='image/png' sizes='16x16' href='../img/favicon-16x16.png'>
 					$this->css
 					$this->js
 				</HEAD>

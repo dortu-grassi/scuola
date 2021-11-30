@@ -6,16 +6,51 @@ class CDB{
 	private $utente="";
 	private $passwd="";
 	private $licenza="";
-	protected $schema="dbgriglie";
+	protected $schema="dbscuola";
 	protected $conn;
 	private $filename = 'auto/licenza.txt';
 	private $key="A82DD517";
 	
+	/*************** nazioni *************************/
+	protected $tbNazioni="tbtbNazioni";
+	protected $en_campiNazioni=array(
+			"idNazione"=>0,
+			"continente"=>1,
+			"area"=>2,
+			"codiceStato"=>3,
+			"denominazioneStato"=>4,
+			"cittadinanza"=>5,
+			"codiceStatoSIDI"=>6
+	);
+	protected $campiNazioni=array("idNazione","continente","area","codiceStato","denominazioneStato","cittadinanza","codiceStatoSIDI");
+	protected $tipiNazioni=array(
+		"bigint NOT NULL AUTO_INCREMENT",
+		"varchar(20) NOT NULL",
+		"bigint DEFAULT NULL",
+		"bigint DEFAULT NULL",
+		"varchar(100) NOT NULL",
+		"varchar(50) DEFAULT NULL",
+		"bigint DEFAULT NULL"
+	);
+	/*************** comuni *************************/
+	protected $tbComuni="tbComuni";
+	protected $campiComuni=array("idComune","istat","denominazione","provincia","regione","prefisso","CAP","codFiscale");
+	protected $tipiComuni=array(
+		"bigint NOT NULL AUTO_INCREMENT",
+		"varchar(10) NOT NULL",
+		"varchar(100) NOT NULL",
+		"varchar(4) NOT NULL",
+		"varchar(50) NOT NULL",
+		"varchar(10) DEFAULT NULL",
+		"varchar(5) NOT NULL",
+		"char(4) NOT NULL"
+	);
 	/*************** anagrafica *************************/
 	protected $tbAnagrafica="tbAnagrafica";
 	public $campiAnagrafica=array("idAnagrafica","nome","cognome");
 	protected $tipiAnagrafica=array("bigint","varchar(250)","varchar(250)");
 	protected $dimAnagrafica=array("","(250)","(250)");
+	/***********************************************************************/
 	
 	public function __construct(){
 	}
@@ -25,7 +60,7 @@ class CDB{
 	private function msg($d,$s){
 		return "
 			<script>
-			document.getElementById('".$d."').innerHTML+='<h5>".$s."</h5>';
+			document.getElementById('".$d."').innerHTML+='<h5>".str_replace(array("\n","\r"), "", $s)."</h5>';
 			document.getElementById('".$d."').scrollTop=document.getElementById('".$d."').scrollHeight;
 			</script>";
 	}
@@ -38,6 +73,7 @@ class CDB{
 	public function setPasswd($u){
 			$this->passwd=$u;
 	}
+	private function getNomeTB($tb){return $this->schema.".".$tb;}
 	public function getNomeTBAnagrafica(){
 		return $this->schema.".".$this->tbAnagrafica;
 	}
@@ -81,23 +117,29 @@ class CDB{
 		
 		$this->utente=$content[0];
 		$this->passwd=$content[1];
+		$this->schema=$content[2];
 
 		fclose($handler);
 		
 		return "";
 	}
 
-	private function creaLicenza($u,$p){
+	public function creaLicenza($post){
+		if( empty($post) ){
+			echo "<h5>ORRORE</h5>";
+			return;
+		}
 		$handler = fopen($this->filename, 'w');
 
 		if (false === $handler) {
-			return "Impossibile scrivere il file $this->filename";
+			echo "<h5>Impossibile scrivere il file ".$this->filename."</h5>";
+			return;
 		}
-		$en=$u."-".$p;
+		$en=$post['txtUser']."-".$post['txtUserPSW']."-".$post['txtDB'];
 		$en=$this->cripta($en,$this->key);
 		fwrite($handler, $en);
 		fclose($handler);
-		return "";
+		echo "<h5>licenza inserita</h5>";
 	}
 	private function cripta($s,$key_enc){
 		$met_enc = 'aes256';
@@ -115,6 +157,36 @@ class CDB{
 		echo $this->creaLicenza($post['txtUser'],$post['txtUserPSW']);
 		
 	}
+	private function creaTB($tb,$mezzo,$fine){
+		$q= "
+			create table ".$this->getNomeTB($tb)." (
+				$mezzo,
+				$fine
+			)ENGINE=InnoDB
+		";
+		return $q;
+		
+		$this->conn->query($q);
+		if( $this->conn->error ){
+			return $this->conn->error;
+		}
+		
+		return "";
+	}
+	private function cctTB($cmp,$tipi){
+		$r="";
+		for($i=0;$i<count($cmp);$i++){
+			$r.=$cmp[$i]." ".$tipi[$i].",";
+		}
+		return substr($r,0,strlen($r)-1);
+	}
+	private function pk($pk){
+		return "PRIMARY KEY ($pk)";
+	}
+	private function uq($n,$uq){
+		return "UNIQUE KEY ".$uq.$n."_UNIQUE ($uq)";
+	}
+	
 	public function installa($post,$msg){
 		if( $r=$this->leggiAutorizzazioni()  ){
 			echo $this->msg($msg,$r);
@@ -131,10 +203,19 @@ class CDB{
 		ob_implicit_flush(true);
 		ob_end_flush();
 		
-		echo $this->msg($msg,"p1");
+		if( $r=$this->connetti() ){
+			echo $r;
+			return;
+		}
 		
+		$mezzo=$this->cctTB($this->campiNazioni,$this->tipiNazioni);
+		$fine=$this->pk($this->campiNazioni[0]).",";
+		$fine.=$this->uq(0,$this->campiNazioni[$this->en_campiNazioni["codiceStato"]]);
+		
+		echo $this->msg($msg,$this->creaTB($this->tbNazioni,$mezzo,$fine)); 
 		sleep(1);
-		echo $this->msg($msg,"p2");
+		return;
+		echo $this->msg($msg,"g222222");
 		
 		sleep(1);
 		echo $this->msg($msg,"p3");
