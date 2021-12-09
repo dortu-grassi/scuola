@@ -1,19 +1,19 @@
 <?php
 class CDB{
-	private $server="localhost";
-	private $uroot="";
-	private $proot="";
-	private $utente="";
-	private $passwd="";
-	private $licenza="";
+	protected $server="localhost";
+	protected $uroot="";
+	protected $proot="";
+	protected $utente="";
+	protected $passwd="";
+	protected $licenza="";
 	protected $schema="dbscuola";
 	protected $conn;
-	private $filename = 'auto/licenza.txt';
-	private $key="A82DD517";
+	protected $filename = 'auto/licenza.txt';
+	protected $key="A82DD517";
 	
 	/*************** nazioni *************************/
-	protected $tbNazioni="tbtbNazioni";
-	protected $en_campiNazioni=array(
+	protected $tbNazioni="tbNazioni";
+	protected $en_nazioni=array(
 			"idNazione"=>0,
 			"continente"=>1,
 			"area"=>2,
@@ -34,7 +34,8 @@ class CDB{
 	);
 	/*************** comuni *************************/
 	protected $tbComuni="tbComuni";
-	protected $campiComuni=array("idComune","istat","denominazione","provincia","regione","prefisso","CAP","codFiscale");
+	protected $en_comuni=array("idComune"=>0);
+	protected $campiComuni=array("idComune","istat","nomeComune","provincia","regione","prefisso","CAP","codFiscale");
 	protected $tipiComuni=array(
 		"bigint NOT NULL AUTO_INCREMENT",
 		"varchar(10) NOT NULL",
@@ -45,11 +46,30 @@ class CDB{
 		"varchar(5) NOT NULL",
 		"char(4) NOT NULL"
 	);
+	/*************** componenti *************************/
+	protected $tbComponenti="tbComponenti";
+	protected $en_componenti=array("idComponente"=>0,"denominazione"=>1);
+	protected $campiComponenti=array("idComponenti","denominazione");
+	protected $tipiComponenti=array(
+		"bigint NOT NULL AUTO_INCREMENT",
+		"varchar(50)"
+	);
+	protected $valComponenti=array("docenti"=>"1","alunni"=>"2","genitori"=>"3","ata"=>"4");
 	/*************** anagrafica *************************/
 	protected $tbAnagrafica="tbAnagrafica";
-	public $campiAnagrafica=array("idAnagrafica","nome","cognome");
-	protected $tipiAnagrafica=array("bigint","varchar(250)","varchar(250)");
-	protected $dimAnagrafica=array("","(250)","(250)");
+	protected $en_anagrafica=array("idAnagrafica"=>0,"cf"=>4,"fkResidenza"=>5,"fkCittadinanza"=>6,"fkComponente"=>7);
+	protected $campiAnagrafica=array("idAnagrafica","nome","cognome","dataNascita","cf","fkComuneResidenza","fkCittadinanza","fkComponente");
+	protected $tipiAnagrafica=array(
+			"bigint NOT NULL AUTO_INCREMENT",
+			"varchar(250) NOT NULL",
+			"varchar(250) NOT NULL",
+			"date NOT NULL",
+			"char(16) NOT NULL",
+			"bigint  NOT NULL",
+			"bigint NOT NULL",
+			"bigint NOT NULL"
+	);
+	protected $viewAnaStudenti="viewAnaStudenti";
 	/***********************************************************************/
 	
 	public function __construct(){
@@ -57,7 +77,8 @@ class CDB{
 	private function msgERR($s){
 		return "<h4>$s</h4>";
 	}
-	private function msg($d,$s){
+	protected function msg($d,$s){
+		$s=str_replace("'","\'",$s);
 		return "
 			<script>
 			document.getElementById('".$d."').innerHTML+='<h5>".str_replace(array("\n","\r"), "", $s)."</h5>';
@@ -73,14 +94,14 @@ class CDB{
 	public function setPasswd($u){
 			$this->passwd=$u;
 	}
-	private function getNomeTB($tb){return $this->schema.".".$tb;}
+	public function getNomeTB($tb){return $this->schema.".".$tb;}
 	public function getNomeTBAnagrafica(){
 		return $this->schema.".".$this->tbAnagrafica;
 	}
-	public function getCampi($ar){
+	public function getCampi($tb,$ar){
 		$r=array();
 		foreach($ar as $val){
-			$r[]=$this->tbAnagrafica.".".$val;
+			$r[]=$tb.".".$val;
 		}
 		return $r;
 	}
@@ -93,10 +114,10 @@ class CDB{
 		}
 		return "";
 	}
-	private function chiudi(){
+	protected function chiudi(){
 		$this->conn->close();
 	}
-	private function leggiAutorizzazioni(){
+	protected function leggiAutorizzazioni(){
 		
 		if( !file_exists($this->filename) ){
 			return "licenza non esistente";
@@ -124,111 +145,57 @@ class CDB{
 		return "";
 	}
 
-	public function creaLicenza($post){
-		if( empty($post) ){
-			echo "<h5>ORRORE</h5>";
-			return;
-		}
-		$handler = fopen($this->filename, 'w');
-
-		if (false === $handler) {
-			echo "<h5>Impossibile scrivere il file ".$this->filename."</h5>";
-			return;
-		}
-		$en=$post['txtUser']."-".$post['txtUserPSW']."-".$post['txtDB'];
-		$en=$this->cripta($en,$this->key);
-		fwrite($handler, $en);
-		fclose($handler);
-		echo "<h5>licenza inserita</h5>";
-	}
-	private function cripta($s,$key_enc){
+	protected function cripta($s,$key_enc){
 		$met_enc = 'aes256';
 		$iv = '9ua1R0iHLD56hG13'; 
 		return openssl_encrypt($s, $met_enc, $key_enc, 0, $iv);
 	}
-	private function decripta($s,$key_enc){
+	protected function decripta($s,$key_enc){
 		$met_enc = 'aes256';
 		$iv = '9ua1R0iHLD56hG13'; 
 		return openssl_decrypt($s, $met_enc, $key_enc, 0, $iv);
 	}
 	
-	public function licenzia($post){
+	protected function licenzia($post){
 		
 		echo $this->creaLicenza($post['txtUser'],$post['txtUserPSW']);
 		
 	}
-	private function creaTB($tb,$mezzo,$fine){
+	protected function creaTB($tb,$mezzo,$fine){
 		$q= "
-			create table ".$this->getNomeTB($tb)." (
+			create table if not exists ".$this->getNomeTB($tb)." (
 				$mezzo,
 				$fine
 			)ENGINE=InnoDB
 		";
-		return $q;
+		//return $q;
 		
 		$this->conn->query($q);
 		if( $this->conn->error ){
-			return $this->conn->error;
+			return $this->conn->error."<br>".$q;
 		}
 		
 		return "";
 	}
-	private function cctTB($cmp,$tipi){
+	protected function cctTB($cmp,$tipi){
 		$r="";
 		for($i=0;$i<count($cmp);$i++){
 			$r.=$cmp[$i]." ".$tipi[$i].",";
 		}
 		return substr($r,0,strlen($r)-1);
 	}
-	private function pk($pk){
+	protected function pk($pk){
 		return "PRIMARY KEY ($pk)";
 	}
-	private function uq($n,$uq){
+	protected function uq($n,$uq){
 		return "UNIQUE KEY ".$uq.$n."_UNIQUE ($uq)";
 	}
-	
-	public function installa($post,$msg){
-		if( $r=$this->leggiAutorizzazioni()  ){
-			echo $this->msg($msg,$r);
-			return;
-		}
-		//echo  $this->msgERR($this->utente."-".$this->passwd);
-		//return;
+	protected function fk($fk,$tbfk,$idfk){
+		return "
+			CONSTRAINT FK_$fk 
+			FOREIGN KEY ($fk) REFERENCES ".$this->getNomeTB($tbfk)."($idfk)
+		";
 		
-		//echo  $this->msgERR($this->user."-".$post['txtUser']);
-		if( ($post['txtUser']!=$this->utente) || ($post['txtUserPSW']!=$this->passwd) ){
-			echo $this->msg($msg,"UTENTE O PASSWORD ERRATI");
-			return;
-		}
-		ob_implicit_flush(true);
-		ob_end_flush();
-		
-		if( $r=$this->connetti() ){
-			echo $r;
-			return;
-		}
-		
-		$mezzo=$this->cctTB($this->campiNazioni,$this->tipiNazioni);
-		$fine=$this->pk($this->campiNazioni[0]).",";
-		$fine.=$this->uq(0,$this->campiNazioni[$this->en_campiNazioni["codiceStato"]]);
-		
-		echo $this->msg($msg,$this->creaTB($this->tbNazioni,$mezzo,$fine)); 
-		sleep(1);
-		return;
-		echo $this->msg($msg,"g222222");
-		
-		sleep(1);
-		echo $this->msg($msg,"p3");
-		sleep(1);
-		echo $this->msg($msg,"p3");
-		sleep(1);
-		echo $this->msg($msg,"p3");
-		sleep(1);
-		echo $this->msg($msg,"p5");
-		
-		//$this->scriviAutorizzazioni();
-		//return $this->leggiAutorizzazioni();
-			
 	}
 }
 /***********************************************

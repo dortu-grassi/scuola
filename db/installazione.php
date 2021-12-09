@@ -1,6 +1,6 @@
 <?php
 function fpg(){
-		$pg=new CPG("ciao");
+	$pg=new CPG("ciao");
 	$pg->setJS("installazione.js");
 	$pg->setCSS("installazione.css");
 	
@@ -37,17 +37,17 @@ function fpg(){
 	echo $pg->prendiPG($r);
 }
 	include "../pg/CPG.php";
-	include "CDB.php";
+	include "CInstallazione.php";
 	if( !empty($_POST) ){
+		$db=new CInstallazione();
 		if( $_POST['txtStato']=="installa" ){
 			fpg();
-			$db=new CDB();
-			$db->installa($_POST,"idmsg");
-					
+			//$db=new CInstallazione();
+			$db->installaTBS($_POST,"idmsg");
 		}
 		else if( $_POST['txtStato']=="licenzia" ){
 			//print_r($_POST);
-			$db=new CDB();
+			//$db=new CInstallazione();
 			$db->creaLicenza($_POST);
 			return;
 		}
