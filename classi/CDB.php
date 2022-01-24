@@ -8,7 +8,7 @@ class CDB{
 	protected $licenza="";
 	protected $schema="dbscuola";
 	protected $conn;
-	protected $filename = 'auto/licenza.txt';
+	protected $filename = '../classi/auto/licenza.txt';
 	protected $key="A82DD517";
 	
 	/*************** nazioni *************************/
@@ -54,11 +54,13 @@ class CDB{
 		"bigint NOT NULL AUTO_INCREMENT",
 		"varchar(50)"
 	);
-	protected $valComponenti=array("docenti"=>"1","alunni"=>"2","genitori"=>"3","ata"=>"4");
+	protected $valComponent="(1,'DOCENTI'),(2,'ALUNNI'),(3,'GENITORI'),(4,'ATA'),(5,'DS'),(6,'DSGA')";
+	protected $valComponenti=array('docenti'=>1,'alunni'=>2,'genitori'=>3,'ata'=>4,'ds'=>5,'dsga'=>6);
 	/*************** anagrafica *************************/
 	protected $tbAnagrafica="tbAnagrafica";
 	protected $en_anagrafica=array("idAnagrafica"=>0,"cf"=>4,"fkResidenza"=>5,"fkCittadinanza"=>6,"fkComponente"=>7);
-	protected $campiAnagrafica=array("idAnagrafica","nome","cognome","dataNascita","cf","fkComuneResidenza","fkCittadinanza","fkComponente");
+	protected $campiAnagrafica=array("idAnagrafica","nome","cognome","dataNascita","cf","fkComuneResidenza",
+		"fkCittadinanza","fkComponente","sesso");
 	protected $tipiAnagrafica=array(
 			"bigint NOT NULL AUTO_INCREMENT",
 			"varchar(250) NOT NULL",
@@ -67,9 +69,76 @@ class CDB{
 			"char(16) NOT NULL",
 			"bigint  NOT NULL",
 			"bigint NOT NULL",
-			"bigint NOT NULL"
+			"bigint NOT NULL",
+			"char(1)"
 	);
 	protected $viewAnaStudenti="viewAnaStudenti";
+	/****************** anni scolastici ************************************/
+	protected $tbAS="tbas";
+	protected $en_as=array("anno"=>0,"stato"=>1);
+	protected $campiAS=array("anno","attivo");
+	protected $tipiAS=array("char(8) not null","int(1) default 0");
+	/*************** stati studente  *************************/
+	protected $tbStatiStudente="tbstatistudente";
+	protected $en_statiStudente=array("idStatoStudente"=>0,"denominazione"=>1);
+	protected $campiStatiStudente=array("idStatoStudente","denominazione");
+	protected $tipiStatiStudente=array(
+		"bigint NOT NULL AUTO_INCREMENT",
+		"varchar(50)"
+	);
+	//protected $valStatiStudent="(1,'PROMOSSO'),(2,'SOSPESO'),(3,'BOCCIATO'),(4,'R2'),(5,'RITIRATO'),(6,'TRASPERITO')";
+	protected $valStatiStudente=array('PROMOSSO'=>1,'SOSPESO'=>2,'BOCCIATO'=>3,'R2'=>4,'RITIRATO'=>5,'TRASFERITO'=>6);
+	/*************** indirizzi  *************************/
+	protected $tbIndirizzi="tbindirizzi";
+	protected $en_Indirizzi=array("idIndirizzo"=>0,"denominazione"=>1,"codice"=>2,"nomeCorto"=>3);
+	protected $campiIndirizzi=array("idIndirizzi","denominazione","codice","nomeCorto");
+	protected $tipiIndirizzi=array(
+		"bigint NOT NULL AUTO_INCREMENT",
+		"varchar(50) not null",
+		"char(10) not null",
+		"char(3) not null"
+	);
+	protected $valIndirizzi=array('mm'=>'MM','in'=>'IN','el'=>'EL','tl'=>'TL','cs'=>'CS','cd'=>'CD');	
+	/*************** classi  *************************/
+	protected $tbClassi="tbclassi";
+	protected $en_Classi=array("idClassi"=>0,"annoscolastico"=>3);
+	protected $campiClassi=array("idClassi","annoCorso","sezione","annoscolastico");
+	protected $tipiClassi=array(
+		"bigint auto_increment",
+		"int not null",
+		"varchar(100) not null",
+		"char(8) not null"
+	);
+	/*************** BES  *************************/
+	protected $tbBES="tbbes";
+	protected $campiBES=array("idBES","tipo");
+	protected $en_BES=array("idBES"=>0,"tipo"=>1);
+	protected $tipiBES=array(
+		"bigint auto_increment",
+		"varchar(100) not null"
+	);
+	protected $valBES=array('BES'=>1,'DSA'=>2,'HC'=>3);
+	/*************** curricula  *************************/
+	protected $tbCurricula="tbcurricula";
+	protected $en_Curricula=array(
+		"idCurricula"=>0,"fkanagrafica"=>1,"fkBES"=>2,
+		"fkstatostudente"=>3,"fkclasse"=>4,"fkindirizzo"=>8
+	);
+	protected $campiCurricula=array(
+		"idCurricula","fkAnagrafica","fkBES","fkstatostudente",
+		"fkclasse","religione","richiesta","voto","fkIndirizzo"
+	);
+	protected $tipiCurricula=array(
+		"bigint NOT NULL AUTO_INCREMENT",
+		"bigint not null",
+		"bigint not null",
+		"bigint not null",
+		"bigint not null",
+		"char(2) default 'NO'",
+		"varchar(250) default null",
+		"int default null",
+		"bigint not null"
+	);
 	/***********************************************************************/
 	
 	public function __construct(){
@@ -107,6 +176,11 @@ class CDB{
 	}
 	
 	protected  function connetti(){
+		if( $r=$this->leggiAutorizzazioni()  ){
+			//echo $this->msg($msg,$r);
+			return $r;
+		}
+
 		$this->conn = new mysqli($this->server,$this->utente,$this->passwd,$this->schema);
 		if($this->conn->connect_error) {
     		return 'Errore di connessione (' . $this->conn->connect_errno . ') '
@@ -190,12 +264,25 @@ class CDB{
 	protected function uq($n,$uq){
 		return "UNIQUE KEY ".$uq.$n."_UNIQUE ($uq)";
 	}
-	protected function fk($fk,$tbfk,$idfk){
+	protected function fk($n,$fk,$tbfk,$idfk){
 		return "
-			CONSTRAINT FK_$fk 
+			CONSTRAINT FK_".$n.$fk."
 			FOREIGN KEY ($fk) REFERENCES ".$this->getNomeTB($tbfk)."($idfk)
 		";
 		
+	}
+	protected function insertINTO($tb,$cmp,$val){
+		$q= "
+			replace into $tb( $cmp )
+			values  $val 
+		";
+
+		$this->conn->query($q);
+		if( $this->conn->error ){
+			return $this->conn->error."<br>".$q;
+		}
+		
+		return "";
 	}
 }
 /***********************************************

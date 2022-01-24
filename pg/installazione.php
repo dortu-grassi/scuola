@@ -1,8 +1,8 @@
 <?php
 function fpg(){
 	$pg=new CPG("ciao");
-	$pg->setJS("installazione.js");
-	$pg->setCSS("installazione.css");
+	$pg->setJS("../js/installazione.js");
+	$pg->setCSS("../css/installazione.css");
 	
 		
 	$r="
@@ -36,8 +36,8 @@ function fpg(){
 	";
 	echo $pg->prendiPG($r);
 }
-	include "../pg/CPG.php";
-	include "CInstallazione.php";
+	include "../classi/CPG.php";
+	include "../classi/CInstallazione.php";
 	if( !empty($_POST) ){
 		$db=new CInstallazione();
 		if( $_POST['txtStato']=="installa" ){

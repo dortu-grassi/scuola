@@ -1,17 +1,30 @@
 <?php
+	define('DEBUG', true);
 class CPG{
 	
 	private $testata;
 	private $menu;
 	private $footer;
-	
+	private $css="";	
 	private $titolo="";
 	private $contenitore="<h1>PAGINA IN COSTRUZIONE</h1>";
 	private $js="";
-	private $css="<link rel='stylesheet' href='../css/std.css'>";
+
+	
 	
 	public function __construct($titolo){
 		$this->setTitolo($titolo);
+		if( DEBUG )
+			$this->css="<link rel='stylesheet' href='../css/std.css?v=".time()."'>";
+		else
+			$this->css="<link rel='stylesheet' href='../css/std.css'>";
+	}
+	public function not_permesso($l,$richiesto){
+		return "";
+		if( $l<1 || $l>$richiesto ){
+			return "<h1>NON PUOI ENTRARE</h1>";
+		}
+		return "";
 	}
 	private function head(){
 		return "
@@ -26,10 +39,18 @@ class CPG{
 		";
 	}
 	public function setCSS($css){
-		$this->css.="<link rel='stylesheet' href='../css/$css'>";
+		if( DEBUG )
+			$this->css.="<link rel='stylesheet' href='../css/".$css."?v=".time()."'>";
+		else
+			$this->css.="<link rel='stylesheet' href='../css/".$css."'>";
 	}
 	public function setJS($js){
-		$this->js.="<script type='text/javascript' src='$js'></script>";
+		if( DEBUG ){
+			$this->js.="<script type='text/javascript' src='".$js."?v=".time()."'></script>";
+		}
+		else{
+			$this->js.="<script type='text/javascript' src='$js'></script>";
+		}
 	}
 	public function setTitolo($t){
 		$this->titolo=substr($t,0,9);
